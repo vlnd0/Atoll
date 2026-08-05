@@ -114,6 +114,9 @@ struct TabSelectionView: View {
         if Defaults[.enableSnippetsFeature] {
             tabsArray.append(TabModel(label: "Snippets", icon: "text.badge.plus", view: .snippets))
         }
+        if #available(macOS 15.0, *), Defaults[.enableTranslateFeature] {
+            tabsArray.append(TabModel(label: "Translate", icon: "character.bubble", view: .translate))
+        }
         if Defaults[.enableTerminalFeature] {
             tabsArray.append(TabModel(label: "Terminal", icon: "apple.terminal", view: .terminal))
         }

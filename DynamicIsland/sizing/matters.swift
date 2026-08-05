@@ -92,6 +92,11 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
+    // Translate tab
+    if #available(macOS 15.0, *), Defaults[.enableTranslateFeature] {
+        count += 1
+    }
+
     // Terminal tab
     if Defaults[.enableTerminalFeature] {
         count += 1

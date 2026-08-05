@@ -25,6 +25,10 @@ pkill -f "/Applications/Atoll Fork.app" 2>/dev/null || true
 str tabBarPosition left          # rail down the leading edge, not a header row
 on  tabSwitchOnHover             # resting the pointer on a tab selects it
 
+# ── Ported from Cyclop ───────────────────────────────────────────────────────
+on  enableSnippetsFeature        # pinned texts, ~/Library/Application Support/Atoll/snippets.json
+on  enableTranslateFeature       # offline EN <-> RU, needs macOS 15
+
 # ── Tabs kept ────────────────────────────────────────────────────────────────
 on  showStandardMediaControls    # Home
 on  showCalendar

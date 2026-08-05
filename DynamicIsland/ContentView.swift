@@ -1109,6 +1109,12 @@ struct ContentView: View {
                                     NotchNotesView()
                                 case .snippets:
                                     NotchSnippetsView()
+                                case .translate:
+                                    if #available(macOS 15.0, *) {
+                                        NotchTranslateView()
+                                    } else {
+                                        NotchHomeView(albumArtNamespace: albumArtNamespace)
+                                    }
                                 case .terminal:
                                     NotchTerminalView()
                                 case .extensionExperience:

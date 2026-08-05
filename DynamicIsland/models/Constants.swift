@@ -1179,6 +1179,9 @@ extension Defaults.Keys {
     // MARK: Snippets
     static let enableSnippetsFeature = Key<Bool>("enableSnippetsFeature", default: false)
 
+    // MARK: Translate
+    static let enableTranslateFeature = Key<Bool>("enableTranslateFeature", default: false)
+
     // MARK: Timer Feature
     static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
     static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)

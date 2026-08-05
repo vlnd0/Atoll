@@ -8426,6 +8426,16 @@ struct TerminalSettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                if #available(macOS 15.0, *) {
+                    Defaults.Toggle(key: .enableTranslateFeature) {
+                        Text("Enable translate")
+                    }
+                    .settingsHighlight(id: highlightID("Enable translate"))
+                    Text("Offline English ↔ Russian, on device. macOS downloads the language pack once, from Language & Region.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Defaults.Toggle(key: .enableTerminalFeature) {
                     Text("Enable terminal")
                 }
