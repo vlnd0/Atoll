@@ -87,6 +87,11 @@ func enabledStandardTabCount() -> Int {
         count += 1
     }
 
+    // Snippets tab
+    if Defaults[.enableSnippetsFeature] {
+        count += 1
+    }
+
     // Terminal tab
     if Defaults[.enableTerminalFeature] {
         count += 1

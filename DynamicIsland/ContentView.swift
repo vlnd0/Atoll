@@ -1107,6 +1107,8 @@ struct ContentView: View {
                                     NotchNotesView()
                                 case .clipboard:
                                     NotchNotesView()
+                                case .snippets:
+                                    NotchSnippetsView()
                                 case .terminal:
                                     NotchTerminalView()
                                 case .extensionExperience:

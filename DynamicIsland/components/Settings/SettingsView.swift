@@ -8418,6 +8418,14 @@ struct TerminalSettings: View {
     var body: some View {
         Form {
             Section {
+                Defaults.Toggle(key: .enableSnippetsFeature) {
+                    Text("Enable snippets")
+                }
+                .settingsHighlight(id: highlightID("Enable snippets"))
+                Text("Pinned pieces of text, kept in ~/Library/Application Support/Atoll/snippets.json and copied with a click.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 Defaults.Toggle(key: .enableTerminalFeature) {
                     Text("Enable terminal")
                 }

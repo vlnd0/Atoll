@@ -1176,6 +1176,9 @@ extension Defaults.Keys {
     static let tabBarPosition = Key<TabBarPosition>("tabBarPosition", default: .top)
     static let tabSwitchOnHover = Key<Bool>("tabSwitchOnHover", default: false)
 
+    // MARK: Snippets
+    static let enableSnippetsFeature = Key<Bool>("enableSnippetsFeature", default: false)
+
     // MARK: Timer Feature
     static let enableTimerFeature = Key<Bool>("enableTimerFeature", default: true)
     static let timerDisplayMode = Key<TimerDisplayMode>("timerDisplayMode", default: .tab)
