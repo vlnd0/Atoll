@@ -92,6 +92,9 @@ struct TabSelectionView: View {
             let icon = Defaults[.enableNotes] ? "note.text" : "doc.on.clipboard"
             tabsArray.append(TabModel(label: label, icon: icon, view: .notes))
         }
+        if Defaults[.enableSnippetsFeature] {
+            tabsArray.append(TabModel(label: "Snippets", icon: "text.badge.plus", view: .snippets))
+        }
         if Defaults[.enableTerminalFeature] {
             tabsArray.append(TabModel(label: "Terminal", icon: "apple.terminal", view: .terminal))
         }
