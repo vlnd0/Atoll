@@ -11,13 +11,15 @@
 
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-com.Ebullioscopic.Atoll}"   # use com.Ebullioscopic.Atoll.dev for a Debug build
+DOMAIN="${DOMAIN:-com.vlnd0.Atoll}"   # use com.vlnd0.Atoll.dev for a Debug build
 
 on()  { defaults write "$DOMAIN" "$1" -bool true; }
 off() { defaults write "$DOMAIN" "$1" -bool false; }
 str() { defaults write "$DOMAIN" "$1" -string "$2"; }
 
-pkill -x Atoll 2>/dev/null || true
+# Matched by path, not by process name: the fork's executable is also called
+# "Atoll", so `pkill -x Atoll` would take a stock Atoll down with it.
+pkill -f "/Applications/Atoll Fork.app" 2>/dev/null || true
 
 # ── Layout ───────────────────────────────────────────────────────────────────
 str tabBarPosition left          # rail down the leading edge, not a header row
@@ -82,4 +84,4 @@ off showMirror
 off showNotHumanFace
 off enableLyrics
 
-echo "Applied to $DOMAIN. Start Atoll to pick it up."
+echo "Applied to $DOMAIN. Start Atoll Fork to pick it up."

@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 #
-# Builds this fork into a signed, stripped, arm64-only Atoll.app.
+# Builds this fork into a signed, stripped, arm64-only "Atoll Fork.app".
+#
+# It installs beside a stock Atoll rather than over it: the fork carries its own
+# bundle identifier, so the two keep separate settings and separate permission
+# grants, and nothing here ever touches /Applications/Atoll.app.
 #
 #   ./scripts/build-fork.sh              build, strip, prune, sign
 #   ./scripts/build-fork.sh --dmg        also package a .dmg
-#   ./scripts/build-fork.sh --install    also replace /Applications/Atoll.app
+#   ./scripts/build-fork.sh --install    also install /Applications/Atoll Fork.app
 #
 # Signing: set SIGN_IDENTITY to a certificate in your keychain. A stable
 # identity matters more than it looks — macOS ties Accessibility, Calendar and
@@ -19,6 +23,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Atoll Personal}"
+APP_NAME="${APP_NAME:-Atoll Fork}"   # installed beside the upstream Atoll.app
 KEEP_LOCALES="${KEEP_LOCALES:-en ru Base}"
 BUILD_DIR="$REPO/.build-fork"
 LOG="$BUILD_DIR/xcodebuild.log"
@@ -57,11 +62,18 @@ xcodebuild \
     build > "$LOG" 2>&1 \
   || { echo "build failed — see $LOG"; grep -aE "error:" "$LOG" | sort -u | head -20; exit 1; }
 
-APP="$BUILD_DIR/Release/Atoll.app"
-BIN="$APP/Contents/MacOS/Atoll"
-[ -d "$APP" ] || { echo "no app at $APP"; exit 1; }
+BUILT="$BUILD_DIR/Release/Atoll.app"
+[ -d "$BUILT" ] || { echo "no app at $BUILT"; exit 1; }
 
-before=$(du -sm "$APP" | cut -f1)
+before=$(du -sm "$BUILT" | cut -f1)
+
+# Installed beside the upstream build, so the bundle needs its own name. Only the
+# directory is renamed — the executable inside keeps the name Info.plist declares
+# in CFBundleExecutable, and nothing is signed yet.
+APP="$BUILD_DIR/Release/$APP_NAME.app"
+rm -rf "$APP"
+[ "$BUILT" = "$APP" ] || mv "$BUILT" "$APP"
+BIN="$APP/Contents/MacOS/Atoll"
 
 say "Stripping symbols"
 # A local Release build keeps the full symbol table — ~46 MB of __LINKEDIT on
@@ -110,7 +122,7 @@ echo "  app size: ${before} MB → ${after} MB"
 if $WANT_DMG; then
     say "Packaging .dmg"
     version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist")
-    dmg="$BUILD_DIR/Atoll-fork-$version.dmg"
+    dmg="$BUILD_DIR/${APP_NAME// /-}-$version.dmg"
     rm -f "$dmg"
     staging="$BUILD_DIR/dmg-staging"
     rm -rf "$staging"; mkdir -p "$staging"
@@ -123,10 +135,11 @@ fi
 
 if $WANT_INSTALL; then
     say "Installing to /Applications"
-    pkill -x Atoll 2>/dev/null || true
-    rm -rf /Applications/Atoll.app
-    cp -R "$APP" /Applications/
-    echo "  /Applications/Atoll.app"
+    # Only ever touches this fork's own bundle, never /Applications/Atoll.app.
+    pkill -f "/Applications/$APP_NAME.app" 2>/dev/null || true
+    rm -rf "/Applications/$APP_NAME.app"
+    cp -R "$APP" "/Applications/$APP_NAME.app"
+    echo "  /Applications/$APP_NAME.app"
 fi
 
 say "Done"

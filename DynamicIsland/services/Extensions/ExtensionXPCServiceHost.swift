@@ -22,7 +22,7 @@ import AtollExtensionKit
 
 /// Shared constants for the Atoll extension XPC service.
 enum ExtensionXPCServiceConstants {
-    static let machServiceName = "com.ebullioscopic.Atoll.xpc"
+    static let machServiceName = "com.vlnd0.Atoll.xpc"  // fork: must differ from upstream, or two installs fight for the same mach name
 }
 
 @MainActor
