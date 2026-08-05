@@ -50,7 +50,10 @@ enum UpdateChannel: String, CaseIterable, Identifiable, Codable, Defaults.Serial
     }
 
     var feedURL: URL {
-        let base = "https://raw.githubusercontent.com/Ebullioscopic/Atoll/main/Updates"
+        // Fork build: the feed points at this fork, not upstream. Left on
+        // upstream, the first automatic check would quietly replace this build
+        // with a stock Atoll release and take every fork change with it.
+        let base = "https://raw.githubusercontent.com/vlnd0/Atoll/personal/Updates"
         switch self {
         case .stable:  return URL(string: "\(base)/appcast.xml")!
         case .beta:    return URL(string: "\(base)/appcast-beta.xml")!
