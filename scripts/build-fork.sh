@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+#
+# Builds this fork into a signed, stripped, arm64-only Atoll.app.
+#
+#   ./scripts/build-fork.sh              build, strip, prune, sign
+#   ./scripts/build-fork.sh --dmg        also package a .dmg
+#   ./scripts/build-fork.sh --install    also replace /Applications/Atoll.app
+#
+# Signing: set SIGN_IDENTITY to a certificate in your keychain. A stable
+# identity matters more than it looks — macOS ties Accessibility, Calendar and
+# Screen Recording grants to the code signature, so an ad-hoc signature (whose
+# hash changes on every build) makes the system re-ask for every permission
+# after each rebuild. Create one in Keychain Access:
+#   Certificate Assistant → Create a Certificate
+#   Name: Atoll Personal · Identity Type: Self Signed Root · Type: Code Signing
+# Falls back to ad-hoc so the script still works before that exists.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SIGN_IDENTITY="${SIGN_IDENTITY:-Atoll Personal}"
+KEEP_LOCALES="${KEEP_LOCALES:-en ru Base}"
+BUILD_DIR="$REPO/.build-fork"
+LOG="$BUILD_DIR/xcodebuild.log"
+
+WANT_DMG=false
+WANT_INSTALL=false
+for arg in "$@"; do
+    case "$arg" in
+        --dmg)     WANT_DMG=true ;;
+        --install) WANT_INSTALL=true ;;
+        *) echo "unknown argument: $arg" >&2; exit 2 ;;
+    esac
+done
+
+say() { printf '\n\033[1m▸ %s\033[0m\n' "$1"; }
+
+mkdir -p "$BUILD_DIR"
+rm -rf "$BUILD_DIR/Release"
+
+say "Building (arm64, Release, no coverage)"
+# ENABLE_CODE_COVERAGE=NO: without it the SPM dependencies come back
+# instrumented, which costs both size and a counter on every branch.
+# CODE_SIGNING_ALLOWED=NO here because stripping invalidates a signature —
+# the app is signed further down, after it has been stripped and pruned.
+xcodebuild \
+    -project "$REPO/DynamicIsland.xcodeproj" \
+    -scheme DynamicIsland \
+    -configuration Release \
+    -derivedDataPath "$BUILD_DIR/DerivedData" \
+    CONFIGURATION_BUILD_DIR="$BUILD_DIR/Release" \
+    ARCHS=arm64 \
+    ONLY_ACTIVE_ARCH=NO \
+    ENABLE_CODE_COVERAGE=NO \
+    CLANG_COVERAGE_MAPPING=NO \
+    CODE_SIGNING_ALLOWED=NO \
+    build > "$LOG" 2>&1 \
+  || { echo "build failed — see $LOG"; grep -aE "error:" "$LOG" | sort -u | head -20; exit 1; }
+
+APP="$BUILD_DIR/Release/Atoll.app"
+BIN="$APP/Contents/MacOS/Atoll"
+[ -d "$APP" ] || { echo "no app at $APP"; exit 1; }
+
+before=$(du -sm "$APP" | cut -f1)
+
+say "Stripping symbols"
+# A local Release build keeps the full symbol table — ~46 MB of __LINKEDIT on
+# this project. The dSYM in DerivedData keeps what is needed to symbolicate.
+chmod u+w "$BIN"
+strip -rSTx "$BIN"
+
+say "Pruning locales (keeping: $KEEP_LOCALES)"
+for lproj in "$APP/Contents/Resources"/*.lproj; do
+    [ -d "$lproj" ] || continue
+    name=$(basename "$lproj" .lproj)
+    keep=false
+    for k in $KEEP_LOCALES; do [ "$name" = "$k" ] && keep=true; done
+    $keep || rm -rf "$lproj"
+done
+
+say "Signing as: $SIGN_IDENTITY"
+if security find-identity -v -p codesigning 2>/dev/null | grep -qF "$SIGN_IDENTITY"; then
+    identity="$SIGN_IDENTITY"
+else
+    echo "  ! '$SIGN_IDENTITY' not found in the keychain — falling back to ad-hoc."
+    echo "    Permissions will be re-requested after every rebuild until a stable"
+    echo "    certificate exists. See the header of this script."
+    identity="-"
+fi
+# Frameworks first: codesign refuses to seal a bundle whose nested code is
+# unsigned or was signed after the outer bundle.
+find "$APP/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \) -print0 2>/dev/null |
+    while IFS= read -r -d '' item; do
+        codesign --force --sign "$identity" --timestamp=none --options runtime "$item" >/dev/null 2>&1 || true
+    done
+codesign --force --deep --sign "$identity" --timestamp=none \
+    --entitlements "$REPO/DynamicIsland/DynamicIsland.entitlements" \
+    "$APP" 2>&1 | sed 's/^/  /'
+
+say "Verifying"
+codesign --verify --deep --strict "$APP" && echo "  signature OK"
+arch_line=$(lipo -info "$BIN")
+echo "  $arch_line"
+case "$arch_line" in *x86_64*) echo "  ! still fat — ARCHS did not take"; exit 1 ;; esac
+cov=$(otool -l "$BIN" | grep -c "__LLVM_COV" || true)
+echo "  __LLVM_COV segments: $cov"
+after=$(du -sm "$APP" | cut -f1)
+echo "  app size: ${before} MB → ${after} MB"
+
+if $WANT_DMG; then
+    say "Packaging .dmg"
+    version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist")
+    dmg="$BUILD_DIR/Atoll-fork-$version.dmg"
+    rm -f "$dmg"
+    staging="$BUILD_DIR/dmg-staging"
+    rm -rf "$staging"; mkdir -p "$staging"
+    cp -R "$APP" "$staging/"
+    ln -s /Applications "$staging/Applications"
+    hdiutil create -volname "Atoll" -srcfolder "$staging" -ov -format UDZO "$dmg" >/dev/null
+    rm -rf "$staging"
+    echo "  $dmg ($(du -sh "$dmg" | cut -f1))"
+fi
+
+if $WANT_INSTALL; then
+    say "Installing to /Applications"
+    pkill -x Atoll 2>/dev/null || true
+    rm -rf /Applications/Atoll.app
+    cp -R "$APP" /Applications/
+    echo "  /Applications/Atoll.app"
+fi
+
+say "Done"
+echo "  $APP"

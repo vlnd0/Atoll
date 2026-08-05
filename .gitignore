@@ -164,3 +164,8 @@ COMPREHENSIVE_DOCUMENTATION.md
 implementation_plan.md
 walkthrough.md
 TemporaryAssets/
+
+# Fork build tooling (the repo ignores *.sh wholesale)
+.build-fork/
+!scripts/build-fork.sh
+!scripts/apply-my-defaults.sh
