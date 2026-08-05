@@ -91,7 +91,11 @@ for lproj in "$APP/Contents/Resources"/*.lproj; do
 done
 
 say "Signing as: $SIGN_IDENTITY"
-if security find-identity -v -p codesigning 2>/dev/null | grep -qF "$SIGN_IDENTITY"; then
+# Deliberately not `find-identity -v`: a self-signed root is reported
+# CSSMERR_TP_NOT_TRUSTED and filtered out by -v, yet it signs perfectly well.
+# What matters here is that the identity is stable between builds, which is
+# what keeps the permission grants; trusting it is a separate question.
+if security find-identity -p codesigning 2>/dev/null | grep -qF "$SIGN_IDENTITY"; then
     identity="$SIGN_IDENTITY"
 else
     echo "  ! '$SIGN_IDENTITY' not found in the keychain — falling back to ad-hoc."
@@ -111,6 +115,14 @@ codesign --force --deep --sign "$identity" --timestamp=none \
 
 say "Verifying"
 codesign --verify --deep --strict "$APP" && echo "  signature OK"
+authority=$(codesign -dvvv "$APP" 2>&1 | sed -n 's/^Authority=//p' | head -1)
+if [ "$identity" = "-" ]; then
+    echo "  signed: ad-hoc"
+else
+    [ "$authority" = "$identity" ] \
+        || { echo "  ! expected to be signed by '$identity' but got '${authority:-ad-hoc}'"; exit 1; }
+    echo "  signed by: $authority"
+fi
 arch_line=$(lipo -info "$BIN")
 echo "  $arch_line"
 case "$arch_line" in *x86_64*) echo "  ! still fat — ARCHS did not take"; exit 1 ;; esac
