@@ -92,6 +92,9 @@ struct TabSelectionView: View {
             let icon = Defaults[.enableNotes] ? "note.text" : "doc.on.clipboard"
             tabsArray.append(TabModel(label: label, icon: icon, view: .notes))
         }
+        if #available(macOS 15.0, *), Defaults[.enableTranslateFeature] {
+            tabsArray.append(TabModel(label: "Translate", icon: "character.bubble", view: .translate))
+        }
         if Defaults[.enableTerminalFeature] {
             tabsArray.append(TabModel(label: "Terminal", icon: "apple.terminal", view: .terminal))
         }
